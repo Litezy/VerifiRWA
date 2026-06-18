@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - name: Run tests
+        run: cargo test --workspace
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - name: Build rwa_registry
+        run: cargo build --target wasm32-unknown-unknown --release --package rwa-registry
+      - name: Build compliance_engine
+        run: cargo build --target wasm32-unknown-unknown --release --package compliance-engine
+      - name: Build yield_distributor
+        run: cargo build --target wasm32-unknown-unknown --release --package yield-distributor
+      - name: Build oracle_receiver
+        run: cargo build --target wasm32-unknown-unknown --release --package oracle-receiver
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - name: Clippy
+        run: cargo clippy --workspace -- -D warnings
+      - name: Format check
+        run: cargo fmt --check
